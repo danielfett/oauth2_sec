@@ -1,0 +1,95 @@
+---
+name: "OAuth"
+variables:
+  - id: grant
+    type: option
+    name: grant type
+    values:
+      - value: oauth_auth_code
+        name: OAuth authorization code
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: no
+      - value: oidc_authz_code
+        name: OIDC authorization code
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oidc_hybrid
+        name: OIDC hybrid
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oauth_implicit
+        name: OAuth implicit
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: no
+      - value: oidc_implicit
+        name: OIDC implicit
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: yes
+  - id: client_auth
+    name: Client authentication
+    type: security
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not code_in_authz_response
+      - value: False
+        name: 'no'
+
+  - id: nonce
+    name: Nonce in ID Token
+    type: security
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not id_token_in_authz_response
+      - value: False
+        name: 'no'                
+  - id: pkce
+    type: security
+    name: PKCE
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not code_in_authz_response
+      - value: False
+        name: 'no'
+  - id: leak_authz_response
+    type: attack
+    name: authorization response leaks to attacker
+
+outcomes:
+  - id: authz
+    name: Authorization
+    desc: The attacker cannot get hold of or use an access token that was issued for another user.
+  - id: si
+    name: Session Integrity
+    desc: The attacker cannot force a client, used by another user, to use his access token or id token.
+
+    
+---
+- source: Known
+  rules:
+    - if: not leak_authz_response
+      prop: authz
+    - if: not token_in_authz_response and pkce
+      prop: authz
+    - if: code_in_authz_response and leak_authz_response and not (pkce or nonce)
+      prop: not authz
+    - if: code_in_authz_response and leak_authz_response and (pkce or nonce)
+      prop: authz
+    - if: token_in_authz_response and leak_authz_response
+      prop: not authz
+      
+    # session integrity
+    - if: token_in_authz_response and leak_authz_response and (not id_token_in_authz_response or not nonce)
+      prop: not si
