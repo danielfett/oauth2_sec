@@ -2,10 +2,11 @@
 import yaml, json
 from itertools import chain
 import sys
+from jinja2 import Template
 
 document = open(sys.argv[1], 'r')
 
-config, rules = yaml.load_all(document)
+config = yaml.load(document)
 
 nodes = []
 
@@ -13,6 +14,25 @@ nodes = []
 origid = id
 def id(obj):
     return 'node' + str(origid(obj))
+
+class Rule:
+    def __init__(self, obj):
+        self.condition = obj['if']
+        self.desc = obj['desc']
+        prop = obj['secprop'].strip()
+        if prop.startswith('not '):
+            prop = prop[4:].strip()
+            res = 'false'
+        elif prop.startswith('~'):
+            res = 'conditional'
+        else:
+            res = 'true'
+        self.secprop = prop
+        self.result = res
+
+    def to_css(self):
+        return f"{self.secprop}_{self.result}"
+
 
 class VarNode:
     def __init__(self, parent, variables, config):
@@ -22,7 +42,7 @@ class VarNode:
             self.parent.children.append(self)
         self.variables = variables
         self.config = config
-        self.outcomes = {}
+        self.secprops = {}
 
     @property
     def all_vars(self):
@@ -34,6 +54,16 @@ class VarNode:
     def check(self, expression):
         vars = self.all_vars
         return eval(expression, {}, vars)
+
+    def check_rule(self, rule):
+        try:
+            if n.check(rule.condition):
+                if rule.secprop in self.secprops:
+                    self.secprops[rule.secprop].append(rule)
+                else:
+                    self.secprops[rule.secprop] = [rule]
+        except NameError as e:
+            print (str(e) + ", vars: " + repr(n.all_vars))
 
     def __iter__(self):
         yield self
@@ -68,13 +98,44 @@ class VarNode:
         text = next((x['name'] for x in self.config['values'] if x['value'] == value), '???')
         return text
 
-    def get_state(self, prop):
-        if prop in self.outcomes:
-            if self.outcomes[prop] is True:
-                return 'pass'
-            else:
-                return 'fail'
-        return "unknown"
+    def to_cy_nodes(self):
+        yield {
+            'data': {
+                'type': 'node',
+                'id': id(self),
+                'label': str(self),
+                'parent': self.config['id']
+            }, 
+        }
+        if self.is_leaf:
+            for prop, rules in self.secprops.items():
+                last_rule = rules[-1]
+                yield {
+                    'data': {
+                        'type': 'secprop',
+                        'id': f"secprop_{id(self)}_{prop}",
+                        'state': last_rule.to_css(),
+                    }, 
+                }
+        else:
+            yield from chain(*map(VarNode.to_cy_nodes, self.children))    
+    def to_cy_edges(self):
+        for c in self.children:
+            yield {
+                'data': {
+                    'source': id(self), 'target': id(c),
+                }
+            }
+        if self.is_leaf:
+            for prop, rules in self.secprops.items():
+                yield {
+                    'data': {
+                        'source': id(self), 'target': f"secprop_{id(self)}_{prop}",
+                    }
+                }
+        yield from chain(*map(VarNode.to_cy_edges, self.children))
+
+    
 
 variables = {}
 
@@ -102,7 +163,7 @@ def parse_config(parent_nodes, config):
 
 
 start_node = VarNode(None, {}, {
-    'name': "OAuth",
+    'name': config['name'],
     'type': "root",
     'id': 'root',
 })
@@ -111,51 +172,17 @@ nodes = [start_node]
 for c in config['variables']:
     nodes = parse_config(nodes, c)
 
+for r in config['rules']:
+    rule = Rule(r)
+    for n in start_node.iter_leaves():
+        n.check_rule(rule)
 
-for ruleset in rules:
-    for r in ruleset['rules']:
-        prop = r['prop'].strip()
-        if prop.startswith('not '):
-            prop = prop[4:].strip()
-            res = False
-        else:
-            res = True
+def filename(config):
+    return f"{config['id']}.html"
 
-        for n in start_node.iter_leaves():
-            try:
-                if n.check(r['if']):
-                    n.outcomes[prop] = res
-                    print (f"Setting {prop} to {res}")
-            except NameError as e:
-                print (str(e) + ", vars: " + repr(n.all_vars))
-                continue
+def write_output_for(template):
 
-def filename(config, outcome):
-    return f"{config['id']}-{outcome['id']}.html"
-
-def write_output_for(outcome):
-
-    nodes = [
-        {
-            'data': {
-                'type': 'node',
-                'id': id(n),
-                'label': str(n),
-                'parent': n.config['id']
-            }, 
-        } for n in start_node
-    ]
-    
-    nodes += [
-        {
-            'data': {
-                'type': 'outcome',
-                'id': "outcome_" + id(n),
-                'state': n.get_state(outcome['id']),
-                #'parent': id(n),
-            }, 
-        } for n in start_node.iter_leaves()
-    ]
+    nodes = list(start_node.to_cy_nodes())
 
 
     nodes += [
@@ -168,134 +195,21 @@ def write_output_for(outcome):
         } for v in config['variables']
     ]
 
-    edges = [
-        {
-            'data': {
-                'source': id(s), 'target': id(t),
-            }
-        } for s, t in start_node.iter_edges()
-    ]
-
-    edges += [
-        {
-            'data': {
-                'source': id(n), 'target': 'outcome_' + id(n),
-            }
-        } for n in start_node.iter_leaves()
-    ]
-
     elements = {
         'nodes': nodes,
-        'edges': edges
+        'edges': list(start_node.to_cy_edges())
     }
 
     root = id(start_node)
 
-    style = [
-        {
-            'selector': 'node[type="node"]',
-            'css': {
-                'content': 'data(label)',
-                'font-size': '25px',
-            }
-        },
-        {
-            'selector': 'edge',
-            'css': {
-                'curve-style': 'bezier',
-                'target-arrow-shape': 'triangle',
-                'width': 4,
-                'line-color': '#ddd',
-                'target-arrow-color': '#ddd',
-            }
-        },
-        {
-            'selector': 'node[state="pass"]',
-            'css': {
-                'background-color': '#70ff60',
-            }
-        },
-        {
-            'selector': 'node[state="fail"]',
-            'css': {
-                'background-color': '#ff7060',
-            }
-        },
-        {
-            'selector': '$node > node',
-            'css': {
-                'padding-top': '10px',
-                'padding-left': '10px',
-                'padding-bottom': '10px',
-                'padding-right': '10px',
-                'text-valign': 'center',
-                'text-halign': 'left',
-                'font-size': '30px',
-                'content': 'data(label)',
-            }
-        }
-    ]
+    
+    with open(filename(config), 'w') as f:
+        f.write(template.render(
+            root=root,
+            elements=json.dumps(elements),
+            config=config,       
+        ))
 
-    js = """
-    var cy = cytoscape({
-      container: document.getElementById('cy'),
+template = Template(open(config['template'], 'r').read())
 
-      boxSelectionEnabled: false,
-      autounselectify: true,
-
-        style: """ + json.dumps(style) + """,
-        elements: """ + json.dumps(elements) + """,
-        layout: {
-        name: 'breadthfirst',
-        directed: true,
-        roots: '#""" + root + """',
-        padding: 10
-      }
-    });
-
-    """
-
-    links = " &middot; ".join("<a href='" + filename(config, o) + "'>" + o['name'] + "</a>" for o in config['outcomes'])
-
-
-    with open(filename(config, outcome), 'w') as f:
-
-        f.write(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <style>
-        body {{
-          font: 20px helvetica neue, helvetica, arial, sans-serif;
-        }}
-
-        #cy {{
-          height: 100vh;
-          width: 100vw;
-        }}
-        </style>
-        <meta charset=utf-8 />
-        <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
-        <title>Security Analysis {config['name']} / {outcome['name']}</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.20/cytoscape.js"></script>
-        </head>
-        <body>
-        <div>
-        <h1>Security Analysis {config['name']}</h1>
-        <h2>{outcome['name']}</h2>
-        <b>{outcome['desc']} (green=true, red=false, grey=unknown)</b><br>
-        Other properties: {links}
-        </div>
-        <div id="cy"></div>
-        <!-- Load application code at the end to ensure DOM is loaded -->
-        <script>
-        {js}
-        </script>
-
-        
-        </body>
-        </html>
-        """)
-        
-for o in config['outcomes']:
-    write_output_for(o)
+write_output_for(template)

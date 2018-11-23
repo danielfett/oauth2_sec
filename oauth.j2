@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+         body {
+             font: 20px helvetica neue, helvetica, arial, sans-serif;
+         }
+
+         #cy {
+             height: 100vh;
+             width: 100vw;
+         }
+        </style>
+        <meta charset=utf-8 />
+        <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
+        <title>{{ config.title }}</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.20/cytoscape.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>{{ config.title }}</h1>
+            {% for secprop in config.security_properties %}
+            <h2>{{ secprop.name }}</h2>
+            <p>{{ secprop.desc }} (green=true, red=false, grey=unknown)</p>
+            {% endfor %}
+        </div>
+        <div id="cy"></div>
+        <!-- Load application code at the end to ensure DOM is loaded -->
+        <script>
+         
+         var cy = cytoscape({
+             container: document.getElementById('cy'),
+
+             boxSelectionEnabled: false,
+             autounselectify: true,
+
+             style: [
+                 {
+                     "selector":"node[type=\"node\"]",
+                     "css":{
+                         "content":"data(label)",
+                         "font-size":"25px"
+                     }
+                 },
+                 {
+                     "selector":"edge",
+                     "css":{
+                         "curve-style":"bezier",
+                         "target-arrow-shape":"triangle",
+                         "width":4,
+                         "line-color":"#ddd",
+                         "target-arrow-color":"#ddd"
+                     }
+                 },
+                 {% for secprop in config.security_properties %}
+                 {% for state, color in secprop.colors.items() %}
+                 {
+                     "selector":"node[state=\"{{ secprop.id }}_{{ state }}\"]",
+                     "css":{
+                         "background-color":"{{ color }}"
+                     }
+                 },
+                 {% endfor %}
+                 {% endfor %}
+                 {
+                     "selector":"node[state=\"fail\"]",
+                     "css":{
+                         "background-color":"#ff7060"
+                     }
+                 },
+                 {
+                     "selector":"$node > node",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"30px",
+                         "content":"data(label)"
+                     }
+                 }
+             ],
+             elements: {{ elements }},
+             layout: {
+                 name: 'breadthfirst',
+                 directed: true,
+                 roots: '#{{ root }}',
+                 padding: 10
+             }
+         });
+
+         
+        </script>
+
+        
+    </body>
+</html>
