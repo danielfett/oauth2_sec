@@ -44,6 +44,23 @@ class VarNode:
             yield (self, c)
         yield from chain(*map(VarNode.iter_edges, self.children))
 
+    def iter_leaves(self):
+        if self.is_leaf:
+            yield self
+        else:
+            yield from chain(*map(VarNode.iter_leaves, self.children))
+
+    def iter_non_leaves(self):
+        if not self.is_leaf:
+            yield self
+        else:
+            yield from chain(*map(VarNode.iter_leaves, self.children))
+        
+
+    @property
+    def is_leaf(self):
+        return len(self.children) == 0
+
     def __str__(self):
         if not self.parent:
             return ''
@@ -104,8 +121,7 @@ for ruleset in rules:
         else:
             res = True
 
-        for n in start_node:
-            print (n)
+        for n in start_node.iter_leaves():
             try:
                 if n.check(r['if']):
                     n.outcomes[prop] = res
@@ -122,19 +138,32 @@ def write_output_for(outcome):
     nodes = [
         {
             'data': {
+                'type': 'node',
                 'id': id(n),
                 'label': str(n),
-                'state': n.get_state(outcome['id']),
                 'parent': n.config['id']
             }, 
         } for n in start_node
     ]
+    
+    nodes += [
+        {
+            'data': {
+                'type': 'outcome',
+                'id': "outcome_" + id(n),
+                'state': n.get_state(outcome['id']),
+                #'parent': id(n),
+            }, 
+        } for n in start_node.iter_leaves()
+    ]
+
 
     nodes += [
         {
             'data': {
+                'type': 'variable',
                 'id': v['id'],
-                'label': (v['type'] + ": " + v['name']),
+                'label': v['name'],
             }
         } for v in config['variables']
     ]
@@ -147,6 +176,14 @@ def write_output_for(outcome):
         } for s, t in start_node.iter_edges()
     ]
 
+    edges += [
+        {
+            'data': {
+                'source': id(n), 'target': 'outcome_' + id(n),
+            }
+        } for n in start_node.iter_leaves()
+    ]
+
     elements = {
         'nodes': nodes,
         'edges': edges
@@ -156,7 +193,7 @@ def write_output_for(outcome):
 
     style = [
         {
-            'selector': 'node',
+            'selector': 'node[type="node"]',
             'css': {
                 'content': 'data(label)',
                 'font-size': '25px',
@@ -191,9 +228,10 @@ def write_output_for(outcome):
                 'padding-left': '10px',
                 'padding-bottom': '10px',
                 'padding-right': '10px',
-                'text-valign': 'top',
-                'text-halign': 'center',
+                'text-valign': 'center',
+                'text-halign': 'left',
                 'font-size': '30px',
+                'content': 'data(label)',
             }
         }
     ]

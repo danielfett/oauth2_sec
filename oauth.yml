@@ -2,9 +2,12 @@
 name: "OAuth"
 id: "oauth"
 variables:
+  - id: leak_authz_response
+    type: attack
+    name: Does the authorization response leak to attacker?
   - id: grant
     type: option
-    name: grant type
+    name: Which grant type?
     values:
       - value: oauth_auth_code
         name: OAuth authorization code
@@ -37,7 +40,7 @@ variables:
           code_in_authz_response: no
           id_token_in_authz_response: yes
   - id: client_auth
-    name: Client authentication
+    name: Is client authentication used?
     type: security
     values:
       - value: True
@@ -47,7 +50,7 @@ variables:
         name: 'no'
 
   - id: nonce
-    name: Nonce in ID Token
+    name: Is the nonce in the ID Token used?
     type: security
     values:
       - value: True
@@ -57,16 +60,13 @@ variables:
         name: 'no'                
   - id: pkce
     type: security
-    name: PKCE
+    name: Is PKCE used?
     values:
       - value: True
         name: 'yes'
         conflict: not code_in_authz_response
       - value: False
         name: 'no'
-  - id: leak_authz_response
-    type: attack
-    name: authorization response leaks to attacker
 
 outcomes:
   - id: authz
