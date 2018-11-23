@@ -1,7 +1,9 @@
+#!/usr/bin/python3
 import yaml, json
 from itertools import chain
+import sys
 
-document = open('oauth.yml', 'r')
+document = open(sys.argv[1], 'r')
 
 config, rules = yaml.load_all(document)
 
@@ -112,7 +114,8 @@ for ruleset in rules:
                 print (str(e) + ", vars: " + repr(n.all_vars))
                 continue
 
-    
+def filename(config, outcome):
+    return f"{config['id']}-{outcome['id']}.html"
 
 def write_output_for(outcome):
 
@@ -214,10 +217,10 @@ def write_output_for(outcome):
 
     """
 
-    links = " &middot; ".join("<a href='output-" + o['id'] + ".html'>" + o['name'] + "</a>" for o in config['outcomes'])
+    links = " &middot; ".join("<a href='" + filename(config, o) + "'>" + o['name'] + "</a>" for o in config['outcomes'])
 
 
-    with open(f'output-{outcome["id"]}.html', 'w') as f:
+    with open(filename(config, outcome), 'w') as f:
 
         f.write(f"""
         <!DOCTYPE html>

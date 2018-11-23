@@ -1,5 +1,6 @@
 ---
 name: "OAuth"
+id: "oauth"
 variables:
   - id: grant
     type: option
