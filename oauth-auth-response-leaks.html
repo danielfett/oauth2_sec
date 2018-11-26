@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+         body {
+             font: 20px helvetica neue, helvetica, arial, sans-serif;
+         }
+
+         #cy {
+             height: 100vh;
+             width: 100vw;
+         }
+        </style>
+        <meta charset=utf-8 />
+        <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
+        <title>OAuth 2.0 Authorization (Authz Response Leaks)</title>
+        <script src="js/cytoscape.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>OAuth 2.0 Authorization (Authz Response Leaks)</h1>
+            This is an analysis of various OAuth flows under the assumption that <b>the authorization response leaks</b> and no other attacks are performed on the OAuth flows (e.g., endpoints are configured correctly and do not act maliciously, etc.).
+            
+            <h2>Authorization</h2>
+            <p>The attacker cannot get hold of or use an access token that was issued for another user. (green=true, red=false, grey=unknown)</p>
+            
+        </div>
+        <div id="cy"></div>
+        <!-- Load application code at the end to ensure DOM is loaded -->
+        <script>
+         
+         var cy = cytoscape({
+             container: document.getElementById('cy'),
+
+             boxSelectionEnabled: false,
+             autounselectify: true,
+
+             style: [
+                 {
+                     "selector":"node[type=\"node\"]",
+                     "css":{
+                         "content":"data(label)",
+                         "font-size":"25px"
+                     }
+                 },
+                 {
+                     "selector":"edge",
+                     "css":{
+                         "curve-style":"bezier",
+                         "target-arrow-shape":"triangle",
+                         "width":4,
+                         "line-color":"#ddd",
+                         "target-arrow-color":"#ddd"
+                     }
+                 },
+                 
+                 
+                 {
+                     "selector":"node[state=\"authz_true\"]",
+                     "css":{
+                         "background-color":"#70ff60"
+                     }
+                 },
+                 
+                 {
+                     "selector":"node[state=\"authz_false\"]",
+                     "css":{
+                         "background-color":"#ff7060"
+                     }
+                 },
+                 
+                 {
+                     "selector":"node[state=\"authz_conditional\"]",
+                     "css":{
+                         "background-color":"#ff9900"
+                     }
+                 },
+                 
+                 
+                 {
+                     "selector":"$node > node",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"30px",
+                         "content":"data(label)"
+                     }
+                 },
+                 {
+                     "selector":"#secprop_results",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"30px",
+                         "content":"Secure?",
+                         "background-color":"#eef",
+                     }
+                 },
+                 {
+                     "selector":"node[type=\"rule\"]",
+                     "css":{
+                         "width": "1em",
+                         "text-max-width": "14.5em",
+                         "height": "label",
+                         "text-wrap": "wrap",
+                         "text-valign":"center",
+                         "text-halign":"center",
+                         "font-size":"15px",
+                         "content":"data(label)",
+                         "background-color":"#efe",
+                         "text-background-opacity": "1",
+                         "text-background-color": "#efe",
+                         "text-background-shape": "roundrectangle",
+                         "text-border-color": "#363",
+                         "text-border-width": "1",
+                         "text-border-opacity": "1",
+                     }
+                 },
+                 
+             ],
+             elements: {"nodes": [{"data": {"type": "node", "id": "node140077811114224", "label": "", "parent": "root"}}, {"data": {"type": "node", "id": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261432", "label": "OAuth authorization code", "parent": "grant"}}, {"data": {"type": "node", "id": "node140077790261936", "label": "yes", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790262216", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263504", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263504_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790263672", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263672_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790262104", "label": "no", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790263000", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263728", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263728_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790263840", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263840_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261768", "label": "OIDC authorization code", "parent": "grant"}}, {"data": {"type": "node", "id": "node140077790261320", "label": "yes", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790262160", "label": "yes", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790262720", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790262720_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790263896", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263896_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790262776", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263616", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263616_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264288", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264288_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261880", "label": "no", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790262496", "label": "yes", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263224", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263224_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790263448", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263448_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790262440", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263560", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263560_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264064", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264064_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261488", "label": "OIDC hybrid", "parent": "grant"}}, {"data": {"type": "node", "id": "node140077790261656", "label": "yes", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790261992", "label": "yes", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263336", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263336_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790265128", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790265128_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264904", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263112", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263112_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264008", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264008_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261712", "label": "no", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790262272", "label": "yes", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263056", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263056_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264120", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264120_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790262552", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263392", "label": "yes", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263392_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790264456", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264456_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261376", "label": "OAuth implicit", "parent": "grant"}}, {"data": {"type": "node", "id": "node140077790261824", "label": "no", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790263168", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263784", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263784_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790261544", "label": "OIDC implicit", "parent": "grant"}}, {"data": {"type": "node", "id": "node140077790262328", "label": "no", "parent": "client_auth"}}, {"data": {"type": "node", "id": "node140077790262048", "label": "yes", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790263952", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790263952_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node140077790262944", "label": "no", "parent": "nonce"}}, {"data": {"type": "node", "id": "node140077790264176", "label": "no", "parent": "pkce"}}, {"data": {"type": "secprop", "id": "secprop_node140077790264176_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "variable", "id": "grant", "label": "Which grant type?"}}, {"data": {"type": "variable", "id": "client_auth", "label": "Is client authentication used?"}}, {"data": {"type": "variable", "id": "nonce", "label": "Is the nonce in the ID Token used?"}}, {"data": {"type": "variable", "id": "pkce", "label": "Is PKCE used?"}}, {"data": {"type": "rule", "id": "node140077790262608", "label": "If an authorization code leaks from the authz response, and is not protected by PKCE or the id token nonce, then the flow must be insecure. The attacker can circumvent client authentication as follows: He starts a new OAuth flow with the same client that the user used and injects the stolen code into the authorization response before it is sent to the client. The client will then use its client credentials to authenticate at the token endpoint.\n"}}, {"data": {"type": "rule", "id": "node140077790264624", "label": "If an authorization code leaks from the authz response, and is not protected by PKCE or the id token nonce, then the flow must be insecure. Without client authentication, the attacker can use the stolen code at the token endpoint and exchange it for an access token that gives access to the user's resources. (The attacker can spoof the client id.)"}}, {"data": {"type": "rule", "id": "node140077790264232", "label": "If PKCE or nonce are used, a code in the authorization response can leak, but the response will still be secure."}}, {"data": {"type": "rule", "id": "node140077790264344", "label": "If a token leaks from the authorization response, an attacker can immediately use this token at the resource server, which break authorization."}}], "edges": [{"data": {"source": "node140077811114224", "target": "node140077790261432"}}, {"data": {"source": "node140077811114224", "target": "node140077790261768"}}, {"data": {"source": "node140077811114224", "target": "node140077790261488"}}, {"data": {"source": "node140077811114224", "target": "node140077790261376"}}, {"data": {"source": "node140077811114224", "target": "node140077790261544"}}, {"data": {"source": "node140077790261432", "target": "node140077790261936"}}, {"data": {"source": "node140077790261432", "target": "node140077790262104"}}, {"data": {"source": "node140077790261936", "target": "node140077790262216"}}, {"data": {"source": "node140077790262216", "target": "node140077790263504"}}, {"data": {"source": "node140077790262216", "target": "node140077790263672"}}, {"data": {"source": "node140077790263504", "target": "secprop_node140077790263504_authz"}}, {"data": {"source": "secprop_node140077790263504_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790263672", "target": "secprop_node140077790263672_authz"}}, {"data": {"source": "secprop_node140077790263672_authz", "target": "node140077790262608"}}, {"data": {"source": "node140077790262104", "target": "node140077790263000"}}, {"data": {"source": "node140077790263000", "target": "node140077790263728"}}, {"data": {"source": "node140077790263000", "target": "node140077790263840"}}, {"data": {"source": "node140077790263728", "target": "secprop_node140077790263728_authz"}}, {"data": {"source": "secprop_node140077790263728_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790263840", "target": "secprop_node140077790263840_authz"}}, {"data": {"source": "secprop_node140077790263840_authz", "target": "node140077790264624"}}, {"data": {"source": "node140077790261768", "target": "node140077790261320"}}, {"data": {"source": "node140077790261768", "target": "node140077790261880"}}, {"data": {"source": "node140077790261320", "target": "node140077790262160"}}, {"data": {"source": "node140077790261320", "target": "node140077790262776"}}, {"data": {"source": "node140077790262160", "target": "node140077790262720"}}, {"data": {"source": "node140077790262160", "target": "node140077790263896"}}, {"data": {"source": "node140077790262720", "target": "secprop_node140077790262720_authz"}}, {"data": {"source": "secprop_node140077790262720_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790263896", "target": "secprop_node140077790263896_authz"}}, {"data": {"source": "secprop_node140077790263896_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790262776", "target": "node140077790263616"}}, {"data": {"source": "node140077790262776", "target": "node140077790264288"}}, {"data": {"source": "node140077790263616", "target": "secprop_node140077790263616_authz"}}, {"data": {"source": "secprop_node140077790263616_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790264288", "target": "secprop_node140077790264288_authz"}}, {"data": {"source": "secprop_node140077790264288_authz", "target": "node140077790262608"}}, {"data": {"source": "node140077790261880", "target": "node140077790262496"}}, {"data": {"source": "node140077790261880", "target": "node140077790262440"}}, {"data": {"source": "node140077790262496", "target": "node140077790263224"}}, {"data": {"source": "node140077790262496", "target": "node140077790263448"}}, {"data": {"source": "node140077790263224", "target": "secprop_node140077790263224_authz"}}, {"data": {"source": "secprop_node140077790263224_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790263448", "target": "secprop_node140077790263448_authz"}}, {"data": {"source": "secprop_node140077790263448_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790262440", "target": "node140077790263560"}}, {"data": {"source": "node140077790262440", "target": "node140077790264064"}}, {"data": {"source": "node140077790263560", "target": "secprop_node140077790263560_authz"}}, {"data": {"source": "secprop_node140077790263560_authz", "target": "node140077790264232"}}, {"data": {"source": "node140077790264064", "target": "secprop_node140077790264064_authz"}}, {"data": {"source": "secprop_node140077790264064_authz", "target": "node140077790264624"}}, {"data": {"source": "node140077790261488", "target": "node140077790261656"}}, {"data": {"source": "node140077790261488", "target": "node140077790261712"}}, {"data": {"source": "node140077790261656", "target": "node140077790261992"}}, {"data": {"source": "node140077790261656", "target": "node140077790264904"}}, {"data": {"source": "node140077790261992", "target": "node140077790263336"}}, {"data": {"source": "node140077790261992", "target": "node140077790265128"}}, {"data": {"source": "node140077790263336", "target": "secprop_node140077790263336_authz"}}, {"data": {"source": "secprop_node140077790263336_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790265128", "target": "secprop_node140077790265128_authz"}}, {"data": {"source": "secprop_node140077790265128_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790264904", "target": "node140077790263112"}}, {"data": {"source": "node140077790264904", "target": "node140077790264008"}}, {"data": {"source": "node140077790263112", "target": "secprop_node140077790263112_authz"}}, {"data": {"source": "secprop_node140077790263112_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790264008", "target": "secprop_node140077790264008_authz"}}, {"data": {"source": "secprop_node140077790264008_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790261712", "target": "node140077790262272"}}, {"data": {"source": "node140077790261712", "target": "node140077790262552"}}, {"data": {"source": "node140077790262272", "target": "node140077790263056"}}, {"data": {"source": "node140077790262272", "target": "node140077790264120"}}, {"data": {"source": "node140077790263056", "target": "secprop_node140077790263056_authz"}}, {"data": {"source": "secprop_node140077790263056_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790264120", "target": "secprop_node140077790264120_authz"}}, {"data": {"source": "secprop_node140077790264120_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790262552", "target": "node140077790263392"}}, {"data": {"source": "node140077790262552", "target": "node140077790264456"}}, {"data": {"source": "node140077790263392", "target": "secprop_node140077790263392_authz"}}, {"data": {"source": "secprop_node140077790263392_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790264456", "target": "secprop_node140077790264456_authz"}}, {"data": {"source": "secprop_node140077790264456_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790261376", "target": "node140077790261824"}}, {"data": {"source": "node140077790261824", "target": "node140077790263168"}}, {"data": {"source": "node140077790263168", "target": "node140077790263784"}}, {"data": {"source": "node140077790263784", "target": "secprop_node140077790263784_authz"}}, {"data": {"source": "secprop_node140077790263784_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790261544", "target": "node140077790262328"}}, {"data": {"source": "node140077790262328", "target": "node140077790262048"}}, {"data": {"source": "node140077790262328", "target": "node140077790262944"}}, {"data": {"source": "node140077790262048", "target": "node140077790263952"}}, {"data": {"source": "node140077790263952", "target": "secprop_node140077790263952_authz"}}, {"data": {"source": "secprop_node140077790263952_authz", "target": "node140077790264344"}}, {"data": {"source": "node140077790262944", "target": "node140077790264176"}}, {"data": {"source": "node140077790264176", "target": "secprop_node140077790264176_authz"}}, {"data": {"source": "secprop_node140077790264176_authz", "target": "node140077790264344"}}]},
+             layout: {
+                 name: 'breadthfirst',
+                 directed: true,
+                 roots: '#node140077811114224',
+                 padding: 0,
+                 nodeDimensionsIncludeLabels: false,
+                 spacingFactor: 1,
+             }
+         });
+
+         
+        </script>
+
+        
+    </body>
+</html>

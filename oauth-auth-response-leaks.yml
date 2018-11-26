@@ -1,0 +1,110 @@
+---
+name: "OAuth"
+id: "oauth-auth-response-leaks"
+template: oauth.j2
+title: OAuth 2.0 Authorization (Authz Response Leaks)
+desc: >-
+  This is an analysis of various OAuth flows under the assumption that
+  <b>the authorization response leaks</b> and no other attacks are
+  performed on the OAuth flows (e.g., endpoints are configured
+  correctly and do not act maliciously, etc.).
+variables:
+  - id: grant
+    type: option
+    name: Which grant type?
+    values:
+      - value: oauth_auth_code
+        name: OAuth authorization code
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: no
+      - value: oidc_authz_code
+        name: OIDC authorization code
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oidc_hybrid
+        name: OIDC hybrid
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oauth_implicit
+        name: OAuth implicit
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: no
+      - value: oidc_implicit
+        name: OIDC implicit
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: yes
+  - id: client_auth
+    name: Is client authentication used?
+    type: security
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not code_in_authz_response
+      - value: False
+        name: 'no'
+
+  - id: nonce
+    name: Is the nonce in the ID Token used?
+    type: security
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not id_token_in_authz_response
+      - value: False
+        name: 'no'                
+  - id: pkce
+    type: security
+    name: Is PKCE used?
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not code_in_authz_response
+      - value: False
+        name: 'no'
+
+security_properties:
+  - id: authz
+    name: Authorization
+    desc: The attacker cannot get hold of or use an access token that was issued for another user.
+    colors:
+      'true': '#70ff60'
+      'false': '#ff7060'
+      conditional: '#ff9900'
+    
+rules:
+  
+  - desc: >
+      If an authorization code leaks from the authz response, and is
+      not protected by PKCE or the id token nonce, then the flow must
+      be insecure. The attacker can circumvent client authentication
+      as follows: He starts a new OAuth flow with the same client that
+      the user used and injects the stolen code into the authorization
+      response before it is sent to the client. The client will then
+      use its client credentials to authenticate at the token
+      endpoint.
+    link: pub/oauth-tr.pdf
+    if: code_in_authz_response and client_auth and not (pkce or nonce)
+    secprop: not authz
+  
+  - desc: If an authorization code leaks from the authz response, and is not protected by PKCE or the id token nonce, then the flow must be insecure. Without client authentication, the attacker can use the stolen code at the token endpoint and exchange it for an access token that gives access to the user's resources. (The attacker can spoof the client id.)
+    if: code_in_authz_response and not client_auth and not (pkce or nonce)
+    secprop: not authz
+    
+  - desc: If PKCE or nonce are used, a code in the authorization response can leak, but the response will still be secure.
+    if: code_in_authz_response  and (pkce or nonce)
+    secprop: authz
+    
+  - desc: If a token leaks from the authorization response, an attacker can immediately use this token at the resource server, which break authorization.
+    if: token_in_authz_response
+    secprop: not authz
+    

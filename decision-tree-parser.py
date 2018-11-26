@@ -107,6 +107,13 @@ class VarNode:
                 'parent': self.config['id']
             }, 
         }
+        if self.parent is None:
+            yield {
+                'data': {
+                    'type': 'node',
+                    'id': 'secprop_results',
+                }
+            }
         if self.is_leaf:
             for prop, rules in self.secprops.items():
                 last_rule = rules[-1]
@@ -115,10 +122,12 @@ class VarNode:
                         'type': 'secprop',
                         'id': f"secprop_{id(self)}_{prop}",
                         'state': last_rule.to_css(),
+                        'parent': 'secprop_results',
                     }, 
                 }
         else:
-            yield from chain(*map(VarNode.to_cy_nodes, self.children))    
+            yield from chain(*map(VarNode.to_cy_nodes, self.children))
+            
     def to_cy_edges(self):
         for c in self.children:
             yield {
@@ -130,7 +139,14 @@ class VarNode:
             for prop, rules in self.secprops.items():
                 yield {
                     'data': {
-                        'source': id(self), 'target': f"secprop_{id(self)}_{prop}",
+                        'source': id(self),
+                        'target': f"secprop_{id(self)}_{prop}",
+                    }
+                }
+                yield {
+                    'data': {
+                        'source': f"secprop_{id(self)}_{prop}",
+                        'target': id(rules[-1]),
                     }
                 }
         yield from chain(*map(VarNode.to_cy_edges, self.children))
@@ -172,8 +188,9 @@ nodes = [start_node]
 for c in config['variables']:
     nodes = parse_config(nodes, c)
 
-for r in config['rules']:
-    rule = Rule(r)
+rules = [Rule(r) for r in config['rules']]
+
+for rule in rules:
     for n in start_node.iter_leaves():
         n.check_rule(rule)
 
@@ -195,6 +212,16 @@ def write_output_for(template):
         } for v in config['variables']
     ]
 
+    nodes += [
+        {
+            'data': {
+                'type': 'rule',
+                'id': id(rule),
+                'label': rule.desc
+            }
+        } for rule in rules
+    ]
+        
     elements = {
         'nodes': nodes,
         'edges': list(start_node.to_cy_edges())

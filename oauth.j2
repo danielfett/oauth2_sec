@@ -14,11 +14,12 @@
         <meta charset=utf-8 />
         <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
         <title>{{ config.title }}</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.20/cytoscape.js"></script>
+        <script src="js/cytoscape.js"></script>
     </head>
     <body>
         <div>
             <h1>{{ config.title }}</h1>
+            {{ config.desc }}
             {% for secprop in config.security_properties %}
             <h2>{{ secprop.name }}</h2>
             <p>{{ secprop.desc }} (green=true, red=false, grey=unknown)</p>
@@ -63,12 +64,6 @@
                  {% endfor %}
                  {% endfor %}
                  {
-                     "selector":"node[state=\"fail\"]",
-                     "css":{
-                         "background-color":"#ff7060"
-                     }
-                 },
-                 {
                      "selector":"$node > node",
                      "css":{
                          "padding-top":"10px",
@@ -80,14 +75,51 @@
                          "font-size":"30px",
                          "content":"data(label)"
                      }
-                 }
+                 },
+                 {
+                     "selector":"#secprop_results",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"30px",
+                         "content":"Secure?",
+                         "background-color":"#eef",
+                     }
+                 },
+                 {
+                     "selector":"node[type=\"rule\"]",
+                     "css":{
+                         "width": "1em",
+                         "text-max-width": "14.5em",
+                         "height": "label",
+                         "text-wrap": "wrap",
+                         "text-valign":"center",
+                         "text-halign":"center",
+                         "font-size":"15px",
+                         "content":"data(label)",
+                         "background-color":"#efe",
+                         "text-background-opacity": "1",
+                         "text-background-color": "#efe",
+                         "text-background-shape": "roundrectangle",
+                         "text-border-color": "#363",
+                         "text-border-width": "1",
+                         "text-border-opacity": "1",
+                     }
+                 },
+                 
              ],
              elements: {{ elements }},
              layout: {
                  name: 'breadthfirst',
                  directed: true,
                  roots: '#{{ root }}',
-                 padding: 10
+                 padding: 0,
+                 nodeDimensionsIncludeLabels: false,
+                 spacingFactor: 1,
              }
          });
 
