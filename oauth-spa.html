@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+         body {
+             font: 20px helvetica, arial, sans-serif;
+             margin-left: 2em;
+             padding: 2em;
+             margin-right: 2em;
+             background-color: #fff;
+             border: 1px solid #999;
+         }
+
+         html {
+             background-color: #ddd;
+         }
+
+         #cy {
+             height: 100vh;
+             margin-left: -1em;
+             margin-right: -1em;
+             border: 1px dashed #999;
+         }
+        </style>
+        <meta charset=utf-8 />
+        <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
+        <title>OAuth 2.0 Authorization (Single-Page App, authorization response leaks)</title>
+        <script src="js/cytoscape.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>OAuth 2.0 Authorization (Single-Page App, authorization response leaks)</h1>
+            This is an analysis of various OAuth flows under the assumption that a Single-Page App is used (having no backend, the website being the OAuth client) and that the access token leaks from the authorization response. We further assume that for authorization codes, PKCE is used.
+            <h2>Security Properties</h2>
+            <ul>
+            
+                <li>
+                    <b>Authorization:</b>
+                    The attacker cannot use an access token that was issued for another user. (green=true, red=false, grey=unknown)
+                </li>
+            
+            </ul>
+            <h2>Rules used</h2>
+            <p>(see labels in graph below)</p>
+            <ul>
+            
+                <li>
+                    <b>AT binding:</b>
+                    If a resource server accepts access tokens only from the domain of the client for which the access token was created, and that domain does not contain XSS bugs, and access token binding is used, then the access token, even if stolen by an attacker, cannot be misused.
+                </li>
+            
+                <li>
+                    <b>PKCE + code:</b>
+                    If PKCE is used, a leaked authorization code cannot be used by an attacker.
+                </li>
+            
+                <li>
+                    <b>Leaked AT:</b>
+                    Without access token binding, an attacker can misuse any leaked access token.
+                </li>
+            
+            </ul>
+        </div>
+        <div id="cy"></div>
+        <!-- Load application code at the end to ensure DOM is loaded -->
+        <script>
+         
+         var cy = cytoscape({
+             container: document.getElementById('cy'),
+
+             boxSelectionEnabled: false,
+             autounselectify: true,
+
+             style: [
+                 {
+                     "selector":"node[type=\"node\"]",
+                     "css":{
+                         "content":"data(label)",
+                         "font-size":"25px"
+                     }
+                 },
+                 {
+                     "selector":"edge",
+                     "css":{
+                         "curve-style":"bezier",
+                         "target-arrow-shape":"triangle",
+                         "width":4,
+                         "line-color":"#ddd",
+                         "target-arrow-color":"#ddd",
+                     }
+                 },
+                 {
+                     "selector":"edge[state]",
+                     "css":{
+                         "opacity": "0.8",
+                         "width": 2,
+                     }
+                 },
+                 
+                 
+                 
+                 {
+                     "selector":"[state=\"authz_true\"]",
+                     "css":{
+                         "background-color":"#70ff60",
+                         "text-background-color":"#70ff60",
+                         "line-color": "#70ff60",
+                     }
+                 },
+                 
+                 {
+                     "selector":"[state=\"authz_false\"]",
+                     "css":{
+                         "background-color":"#ff7060",
+                         "text-background-color":"#ff7060",
+                         "line-color": "#ff7060",
+                     }
+                 },
+                 
+                 {
+                     "selector":"[state=\"authz_conditional\"]",
+                     "css":{
+                         "background-color":"#ff9900",
+                         "text-background-color":"#ff9900",
+                         "line-color": "#ff9900",
+                     }
+                 },
+                 
+                 
+                 {
+                     "selector":"$node > node",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"25px",
+                         "content":"data(label)"
+                     }
+                 },
+                 {
+                     "selector":"#secprop_results",
+                     "css":{
+                         "padding-top":"10px",
+                         "padding-left":"10px",
+                         "padding-bottom":"10px",
+                         "padding-right":"10px",
+                         "text-valign":"center",
+                         "text-halign":"left",
+                         "font-size":"30px",
+                         "content":"Secure?",
+                         "background-color":"#eef",
+                     }
+                 },
+                 {
+                     "selector":"node[type=\"rule\"]",
+                     "css":{
+                         "font-size":"25px",
+                         "width": "1em",
+                         "text-max-width": "14.5em",
+                         "height": "label",
+                         "text-wrap": "wrap",
+                         "text-valign":"center",
+                         "text-halign":"center",
+                         "content":"data(label)",
+                         "text-background-opacity": "0.3",
+                         "text-background-shape": "roundrectangle",
+                     }
+                 },
+                 
+             ],
+             elements: {"nodes": [{"data": {"type": "node", "id": "node139767490674984", "label": "", "parent": "root"}}, {"data": {"type": "node", "id": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822472", "label": "OAuth authorization code (code)", "parent": "grant"}}, {"data": {"type": "node", "id": "node139767469822136", "label": "no", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469822864", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824376", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824376_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825328", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825328_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823312", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824320", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824320_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825552", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825552_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822304", "label": "OIDC authorization code (code id_token)", "parent": "grant"}}, {"data": {"type": "node", "id": "node139767469822528", "label": "no", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469823368", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824600", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824600_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469824656", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824656_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823424", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824992", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824992_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825384", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825384_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822024", "label": "OIDC hybrid (code id_token token)", "parent": "grant"}}, {"data": {"type": "node", "id": "node139767469822192", "label": "yes", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469822696", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824208", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824208_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469824880", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824880_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823648", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824264", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824264_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825104", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825104_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822976", "label": "no", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469823144", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469823984", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469823984_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825048", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825048_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469824040", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824824", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824824_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825888", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825888_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822640", "label": "OAuth implicit (token)", "parent": "grant"}}, {"data": {"type": "node", "id": "node139767469822416", "label": "yes", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469823200", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824096", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824096_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469824712", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824712_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825776", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824768", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824768_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825216", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825216_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822752", "label": "no", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469822920", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824544", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824544_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825496", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825496_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823816", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824152", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824152_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825664", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825664_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822360", "label": "OIDC implicit (id_token token)", "parent": "grant"}}, {"data": {"type": "node", "id": "node139767469822808", "label": "yes", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469823032", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469823928", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469823928_authz", "state": "authz_true", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469824936", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824936_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823872", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469826000", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469826000_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825720", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825720_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469822584", "label": "no", "parent": "access_token_binding"}}, {"data": {"type": "node", "id": "node139767469823088", "label": "yes", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469824432", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469824432_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825272", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825272_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469823592", "label": "no", "parent": "rs_accepts_at_only_header"}}, {"data": {"type": "node", "id": "node139767469825160", "label": "yes", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825160_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "node", "id": "node139767469825440", "label": "no", "parent": "rs_cors_restricted"}}, {"data": {"type": "secprop", "id": "secprop_node139767469825440_authz", "state": "authz_false", "parent": "secprop_results"}}, {"data": {"type": "variable", "id": "grant", "label": "Which grant type?"}}, {"data": {"type": "variable", "id": "access_token_binding", "label": "Is access token sender-constrained?"}}, {"data": {"type": "variable", "id": "rs_accepts_at_only_header", "label": "RS accepts AT only via Authorization header?"}}, {"data": {"type": "variable", "id": "rs_cors_restricted", "label": "RS checks Origin header to match client website?"}}, {"data": {"type": "rule", "id": "node139767469822248", "label": "AT binding", "state": "authz_true"}}, {"data": {"type": "rule", "id": "node139767469823480", "label": "PKCE + code", "state": "authz_true"}}, {"data": {"type": "rule", "id": "node139767469825608", "label": "Leaked AT", "state": "authz_false"}}], "edges": [{"data": {"source": "node139767490674984", "target": "node139767469822472"}}, {"data": {"source": "node139767490674984", "target": "node139767469822304"}}, {"data": {"source": "node139767490674984", "target": "node139767469822024"}}, {"data": {"source": "node139767490674984", "target": "node139767469822640"}}, {"data": {"source": "node139767490674984", "target": "node139767469822360"}}, {"data": {"source": "node139767469822472", "target": "node139767469822136"}}, {"data": {"source": "node139767469822136", "target": "node139767469822864"}}, {"data": {"source": "node139767469822136", "target": "node139767469823312"}}, {"data": {"source": "node139767469822864", "target": "node139767469824376"}}, {"data": {"source": "node139767469822864", "target": "node139767469825328"}}, {"data": {"source": "node139767469824376", "target": "secprop_node139767469824376_authz"}}, {"data": {"source": "secprop_node139767469824376_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469825328", "target": "secprop_node139767469825328_authz"}}, {"data": {"source": "secprop_node139767469825328_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469823312", "target": "node139767469824320"}}, {"data": {"source": "node139767469823312", "target": "node139767469825552"}}, {"data": {"source": "node139767469824320", "target": "secprop_node139767469824320_authz"}}, {"data": {"source": "secprop_node139767469824320_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469825552", "target": "secprop_node139767469825552_authz"}}, {"data": {"source": "secprop_node139767469825552_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469822304", "target": "node139767469822528"}}, {"data": {"source": "node139767469822528", "target": "node139767469823368"}}, {"data": {"source": "node139767469822528", "target": "node139767469823424"}}, {"data": {"source": "node139767469823368", "target": "node139767469824600"}}, {"data": {"source": "node139767469823368", "target": "node139767469824656"}}, {"data": {"source": "node139767469824600", "target": "secprop_node139767469824600_authz"}}, {"data": {"source": "secprop_node139767469824600_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469824656", "target": "secprop_node139767469824656_authz"}}, {"data": {"source": "secprop_node139767469824656_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469823424", "target": "node139767469824992"}}, {"data": {"source": "node139767469823424", "target": "node139767469825384"}}, {"data": {"source": "node139767469824992", "target": "secprop_node139767469824992_authz"}}, {"data": {"source": "secprop_node139767469824992_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469825384", "target": "secprop_node139767469825384_authz"}}, {"data": {"source": "secprop_node139767469825384_authz", "target": "node139767469823480", "state": "authz_true"}}, {"data": {"source": "node139767469822024", "target": "node139767469822192"}}, {"data": {"source": "node139767469822024", "target": "node139767469822976"}}, {"data": {"source": "node139767469822192", "target": "node139767469822696"}}, {"data": {"source": "node139767469822192", "target": "node139767469823648"}}, {"data": {"source": "node139767469822696", "target": "node139767469824208"}}, {"data": {"source": "node139767469822696", "target": "node139767469824880"}}, {"data": {"source": "node139767469824208", "target": "secprop_node139767469824208_authz"}}, {"data": {"source": "secprop_node139767469824208_authz", "target": "node139767469822248", "state": "authz_true"}}, {"data": {"source": "node139767469824880", "target": "secprop_node139767469824880_authz"}}, {"data": {"source": "secprop_node139767469824880_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469823648", "target": "node139767469824264"}}, {"data": {"source": "node139767469823648", "target": "node139767469825104"}}, {"data": {"source": "node139767469824264", "target": "secprop_node139767469824264_authz"}}, {"data": {"source": "secprop_node139767469824264_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825104", "target": "secprop_node139767469825104_authz"}}, {"data": {"source": "secprop_node139767469825104_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469822976", "target": "node139767469823144"}}, {"data": {"source": "node139767469822976", "target": "node139767469824040"}}, {"data": {"source": "node139767469823144", "target": "node139767469823984"}}, {"data": {"source": "node139767469823144", "target": "node139767469825048"}}, {"data": {"source": "node139767469823984", "target": "secprop_node139767469823984_authz"}}, {"data": {"source": "secprop_node139767469823984_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825048", "target": "secprop_node139767469825048_authz"}}, {"data": {"source": "secprop_node139767469825048_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469824040", "target": "node139767469824824"}}, {"data": {"source": "node139767469824040", "target": "node139767469825888"}}, {"data": {"source": "node139767469824824", "target": "secprop_node139767469824824_authz"}}, {"data": {"source": "secprop_node139767469824824_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825888", "target": "secprop_node139767469825888_authz"}}, {"data": {"source": "secprop_node139767469825888_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469822640", "target": "node139767469822416"}}, {"data": {"source": "node139767469822640", "target": "node139767469822752"}}, {"data": {"source": "node139767469822416", "target": "node139767469823200"}}, {"data": {"source": "node139767469822416", "target": "node139767469825776"}}, {"data": {"source": "node139767469823200", "target": "node139767469824096"}}, {"data": {"source": "node139767469823200", "target": "node139767469824712"}}, {"data": {"source": "node139767469824096", "target": "secprop_node139767469824096_authz"}}, {"data": {"source": "secprop_node139767469824096_authz", "target": "node139767469822248", "state": "authz_true"}}, {"data": {"source": "node139767469824712", "target": "secprop_node139767469824712_authz"}}, {"data": {"source": "secprop_node139767469824712_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825776", "target": "node139767469824768"}}, {"data": {"source": "node139767469825776", "target": "node139767469825216"}}, {"data": {"source": "node139767469824768", "target": "secprop_node139767469824768_authz"}}, {"data": {"source": "secprop_node139767469824768_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825216", "target": "secprop_node139767469825216_authz"}}, {"data": {"source": "secprop_node139767469825216_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469822752", "target": "node139767469822920"}}, {"data": {"source": "node139767469822752", "target": "node139767469823816"}}, {"data": {"source": "node139767469822920", "target": "node139767469824544"}}, {"data": {"source": "node139767469822920", "target": "node139767469825496"}}, {"data": {"source": "node139767469824544", "target": "secprop_node139767469824544_authz"}}, {"data": {"source": "secprop_node139767469824544_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825496", "target": "secprop_node139767469825496_authz"}}, {"data": {"source": "secprop_node139767469825496_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469823816", "target": "node139767469824152"}}, {"data": {"source": "node139767469823816", "target": "node139767469825664"}}, {"data": {"source": "node139767469824152", "target": "secprop_node139767469824152_authz"}}, {"data": {"source": "secprop_node139767469824152_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825664", "target": "secprop_node139767469825664_authz"}}, {"data": {"source": "secprop_node139767469825664_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469822360", "target": "node139767469822808"}}, {"data": {"source": "node139767469822360", "target": "node139767469822584"}}, {"data": {"source": "node139767469822808", "target": "node139767469823032"}}, {"data": {"source": "node139767469822808", "target": "node139767469823872"}}, {"data": {"source": "node139767469823032", "target": "node139767469823928"}}, {"data": {"source": "node139767469823032", "target": "node139767469824936"}}, {"data": {"source": "node139767469823928", "target": "secprop_node139767469823928_authz"}}, {"data": {"source": "secprop_node139767469823928_authz", "target": "node139767469822248", "state": "authz_true"}}, {"data": {"source": "node139767469824936", "target": "secprop_node139767469824936_authz"}}, {"data": {"source": "secprop_node139767469824936_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469823872", "target": "node139767469826000"}}, {"data": {"source": "node139767469823872", "target": "node139767469825720"}}, {"data": {"source": "node139767469826000", "target": "secprop_node139767469826000_authz"}}, {"data": {"source": "secprop_node139767469826000_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825720", "target": "secprop_node139767469825720_authz"}}, {"data": {"source": "secprop_node139767469825720_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469822584", "target": "node139767469823088"}}, {"data": {"source": "node139767469822584", "target": "node139767469823592"}}, {"data": {"source": "node139767469823088", "target": "node139767469824432"}}, {"data": {"source": "node139767469823088", "target": "node139767469825272"}}, {"data": {"source": "node139767469824432", "target": "secprop_node139767469824432_authz"}}, {"data": {"source": "secprop_node139767469824432_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825272", "target": "secprop_node139767469825272_authz"}}, {"data": {"source": "secprop_node139767469825272_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469823592", "target": "node139767469825160"}}, {"data": {"source": "node139767469823592", "target": "node139767469825440"}}, {"data": {"source": "node139767469825160", "target": "secprop_node139767469825160_authz"}}, {"data": {"source": "secprop_node139767469825160_authz", "target": "node139767469825608", "state": "authz_false"}}, {"data": {"source": "node139767469825440", "target": "secprop_node139767469825440_authz"}}, {"data": {"source": "secprop_node139767469825440_authz", "target": "node139767469825608", "state": "authz_false"}}]},
+             layout: {
+                 name: 'breadthfirst',
+                 directed: true,
+                 roots: '#node139767490674984',
+                 //padding: 0,
+                 //nodeDimensionsIncludeLabels: false,
+                 //spacingFactor: 1,
+             }
+         });
+
+         
+        </script>
+
+        
+    </body>
+</html>

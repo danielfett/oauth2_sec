@@ -3,12 +3,23 @@
     <head>
         <style>
          body {
-             font: 20px helvetica neue, helvetica, arial, sans-serif;
+             font: 20px helvetica, arial, sans-serif;
+             margin-left: 2em;
+             padding: 2em;
+             margin-right: 2em;
+             background-color: #fff;
+             border: 1px solid #999;
+         }
+
+         html {
+             background-color: #ddd;
          }
 
          #cy {
              height: 100vh;
-             width: 100vw;
+             margin-left: -1em;
+             margin-right: -1em;
+             border: 1px dashed #999;
          }
         </style>
         <meta charset=utf-8 />
@@ -20,10 +31,25 @@
         <div>
             <h1>{{ config.title }}</h1>
             {{ config.desc }}
+            <h2>Security Properties</h2>
+            <ul>
             {% for secprop in config.security_properties %}
-            <h2>{{ secprop.name }}</h2>
-            <p>{{ secprop.desc }} (green=true, red=false, grey=unknown)</p>
+                <li>
+                    <b>{{ secprop.name }}:</b>
+                    {{ secprop.desc }} (green=true, red=false, grey=unknown)
+                </li>
             {% endfor %}
+            </ul>
+            <h2>Rules used</h2>
+            <p>(see labels in graph below)</p>
+            <ul>
+            {% for rule in rules %}
+                <li>
+                    <b>{{ rule.name }}:</b>
+                    {{ rule.desc }}
+                </li>
+            {% endfor %}
+            </ul>
         </div>
         <div id="cy"></div>
         <!-- Load application code at the end to ensure DOM is loaded -->
@@ -50,15 +76,25 @@
                          "target-arrow-shape":"triangle",
                          "width":4,
                          "line-color":"#ddd",
-                         "target-arrow-color":"#ddd"
+                         "target-arrow-color":"#ddd",
                      }
                  },
+                 {
+                     "selector":"edge[state]",
+                     "css":{
+                         "opacity": "0.8",
+                         "width": 2,
+                     }
+                 },
+                 
                  {% for secprop in config.security_properties %}
                  {% for state, color in secprop.colors.items() %}
                  {
-                     "selector":"node[state=\"{{ secprop.id }}_{{ state }}\"]",
+                     "selector":"[state=\"{{ secprop.id }}_{{ state }}\"]",
                      "css":{
-                         "background-color":"{{ color }}"
+                         "background-color":"{{ color }}",
+                         "text-background-color":"{{ color }}",
+                         "line-color": "{{ color }}",
                      }
                  },
                  {% endfor %}
@@ -72,7 +108,7 @@
                          "padding-right":"10px",
                          "text-valign":"center",
                          "text-halign":"left",
-                         "font-size":"30px",
+                         "font-size":"25px",
                          "content":"data(label)"
                      }
                  },
@@ -93,21 +129,16 @@
                  {
                      "selector":"node[type=\"rule\"]",
                      "css":{
+                         "font-size":"25px",
                          "width": "1em",
                          "text-max-width": "14.5em",
                          "height": "label",
                          "text-wrap": "wrap",
                          "text-valign":"center",
                          "text-halign":"center",
-                         "font-size":"15px",
                          "content":"data(label)",
-                         "background-color":"#efe",
-                         "text-background-opacity": "1",
-                         "text-background-color": "#efe",
+                         "text-background-opacity": "0.3",
                          "text-background-shape": "roundrectangle",
-                         "text-border-color": "#363",
-                         "text-border-width": "1",
-                         "text-border-opacity": "1",
                      }
                  },
                  
@@ -117,9 +148,9 @@
                  name: 'breadthfirst',
                  directed: true,
                  roots: '#{{ root }}',
-                 padding: 0,
-                 nodeDimensionsIncludeLabels: false,
-                 spacingFactor: 1,
+                 //padding: 0,
+                 //nodeDimensionsIncludeLabels: false,
+                 //spacingFactor: 1,
              }
          });
 

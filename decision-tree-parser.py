@@ -29,6 +29,7 @@ class Rule:
             res = 'true'
         self.secprop = prop
         self.result = res
+        self.name = obj['name']
 
     def to_css(self):
         return f"{self.secprop}_{self.result}"
@@ -147,6 +148,7 @@ class VarNode:
                     'data': {
                         'source': f"secprop_{id(self)}_{prop}",
                         'target': id(rules[-1]),
+                        'state': rules[-1].to_css(),
                     }
                 }
         yield from chain(*map(VarNode.to_cy_edges, self.children))
@@ -217,7 +219,8 @@ def write_output_for(template):
             'data': {
                 'type': 'rule',
                 'id': id(rule),
-                'label': rule.desc
+                'label': rule.name,
+                'state': rule.to_css(),
             }
         } for rule in rules
     ]
@@ -234,7 +237,8 @@ def write_output_for(template):
         f.write(template.render(
             root=root,
             elements=json.dumps(elements),
-            config=config,       
+            config=config,
+            rules=rules,
         ))
 
 template = Template(open(config['template'], 'r').read())

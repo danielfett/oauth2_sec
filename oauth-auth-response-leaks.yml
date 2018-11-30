@@ -20,13 +20,13 @@ variables:
           code_in_authz_response: yes
           id_token_in_authz_response: no
       - value: oidc_authz_code
-        name: OIDC authorization code
+        name: OIDC authorization code (code id_token)
         implies:
           token_in_authz_response: no
           code_in_authz_response: yes
           id_token_in_authz_response: yes
       - value: oidc_hybrid
-        name: OIDC hybrid
+        name: OIDC hybrid (code id_token token)
         implies:
           token_in_authz_response: yes
           code_in_authz_response: yes
@@ -38,7 +38,7 @@ variables:
           code_in_authz_response: no
           id_token_in_authz_response: no
       - value: oidc_implicit
-        name: OIDC implicit
+        name: OIDC implicit (id_token token)
         implies:
           token_in_authz_response: yes
           code_in_authz_response: no
@@ -82,8 +82,8 @@ security_properties:
       conditional: '#ff9900'
     
 rules:
-  
-  - desc: >
+  - name: Code Leaks + Injection
+    desc: >
       If an authorization code leaks from the authz response, and is
       not protected by PKCE or the id token nonce, then the flow must
       be insecure. The attacker can circumvent client authentication
@@ -96,15 +96,18 @@ rules:
     if: code_in_authz_response and client_auth and not (pkce or nonce)
     secprop: not authz
   
-  - desc: If an authorization code leaks from the authz response, and is not protected by PKCE or the id token nonce, then the flow must be insecure. Without client authentication, the attacker can use the stolen code at the token endpoint and exchange it for an access token that gives access to the user's resources. (The attacker can spoof the client id.)
+  - name: Code Leaks
+    desc: If an authorization code leaks from the authz response, and is not protected by PKCE or the id token nonce, then the flow must be insecure. Without client authentication, the attacker can use the stolen code at the token endpoint and exchange it for an access token that gives access to the user's resources. (The attacker can spoof the client id.)
     if: code_in_authz_response and not client_auth and not (pkce or nonce)
     secprop: not authz
     
-  - desc: If PKCE or nonce are used, a code in the authorization response can leak, but the response will still be secure.
+  - name: No Code Injection
+    desc: If PKCE or nonce are used, a code in the authorization response can leak, but the response will still be secure.
     if: code_in_authz_response  and (pkce or nonce)
     secprop: authz
     
-  - desc: If a token leaks from the authorization response, an attacker can immediately use this token at the resource server, which break authorization.
+  - name: Leaked AT
+    desc: If a token leaks from the authorization response, an attacker can immediately use this token at the resource server, which break authorization.
     if: token_in_authz_response
     secprop: not authz
     

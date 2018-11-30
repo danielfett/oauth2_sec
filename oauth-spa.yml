@@ -1,0 +1,91 @@
+---
+name: "OAuth"
+id: "oauth-spa"
+template: oauth.j2
+title: OAuth 2.0 Authorization (Single-Page App, authorization response leaks)
+desc: >-
+  This is an analysis of various OAuth flows under the assumption that
+  a Single-Page App is used (having no backend, the website being the
+  OAuth client) and that the access token leaks from the
+  authorization response. We further assume that for authorization codes, PKCE
+  is used.
+variables:
+  - id: grant
+    type: option
+    name: Which grant type?
+    values:
+      - value: oauth_auth_code
+        name: OAuth authorization code (code)
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: no
+      - value: oidc_authz_code
+        name: OIDC authorization code (code id_token)
+        implies:
+          token_in_authz_response: no
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oidc_hybrid
+        name: OIDC hybrid (code id_token token)
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: yes
+          id_token_in_authz_response: yes
+      - value: oauth_implicit
+        name: OAuth implicit (token)
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: no
+      - value: oidc_implicit
+        name: OIDC implicit (id_token token)
+        implies:
+          token_in_authz_response: yes
+          code_in_authz_response: no
+          id_token_in_authz_response: yes
+  - id: access_token_binding
+    name: Is access token sender-constrained?
+    type: security
+    values:
+      - value: True
+        name: 'yes'
+        conflict: not token_in_authz_response
+      - value: False
+        name: 'no'
+  - id: rs_accepts_at_only_header
+    name: RS accepts AT only via Authorization header?
+  - id: rs_cors_restricted
+    name: RS checks Origin header to match client website?
+
+security_properties:
+  - id: authz
+    name: Authorization
+    desc: The attacker cannot use an access token that was issued for another user.
+    colors:
+      'true': '#70ff60'
+      'false': '#ff7060'
+      conditional: '#ff9900'
+    
+rules:
+  - name: AT binding
+    desc: >-
+      If a resource server accepts access tokens only from the domain
+      of the client for which the access token was created, and that
+      domain does not contain XSS bugs, and access token binding is
+      used, then the access token, even if stolen by an attacker,
+      cannot be misused.
+    if: token_in_authz_response and access_token_binding and rs_accepts_at_only_header and rs_cors_restricted
+    secprop: authz
+  - name: PKCE + code
+    desc: >-
+      If PKCE is used, a leaked
+      authorization code cannot be used by an attacker.
+    if: not token_in_authz_response
+    secprop: authz
+  - name: Leaked AT
+    desc: >-
+      Without access token binding, an attacker can misuse any leaked
+      access token.
+    if: token_in_authz_response and (not access_token_binding or not rs_accepts_at_only_header or not rs_cors_restricted)
+    secprop: not authz
